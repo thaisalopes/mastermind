@@ -1,69 +1,87 @@
 class Game
-  def initialize
+  def initialize(code_maker,guess_maker)
     @round = 1
     @guess = ""
     @board = Board.new
-    @guess_maker = Guess_Maker.new
-    @code_maker = Code_Maker.new
+    @guess_maker = guess_maker
+    @code_maker = code_maker
+    @code = @code_maker.make_code
     @victory = false
-    full_game
+    play_round
   end
 
-  def full_game
+  def play_round    
     while @round <=12 && @victory == false
-      @guess = @guess_maker.make_guess
-      @code = @code_maker.make_code
-      compare_guess(@guess, @code)
       if @victory == false
-        show_result
-        check_all_correct(@guess, @code)
-        check_included(@guess,@code)
+        @guess = @guess_maker.make_guess
+        compare_guess
       end
       @round += 1
     end
   end
 
-  def compare_guess(guess,code)
-    if guess == code
-      puts "Congratulations, you won! It took you #{@round} guesses."
-      return @victory = true
+  def compare_guess
+    if @guess == @code
+      if @round == 1
+        puts @board.add_guess(@guess)
+        puts "\nCongratulations, you won after only one guess!"
+        return @victory = true
+      else
+        puts @board.add_guess(@guess)
+        puts "\nCongratulations, you won! It took you #{@round} guesses."
+        return @victory = true
+      end
     else 
-      puts "Try again"
+      show_result
+      puts "\nTry again"
     end
   end
 
   def show_result
     @board.add_guess(@guess)
     @board.show_game_board
+    all_correct = check_all_correct
+    included = check_included - check_all_correct
+    if all_correct == 1 && included == 1
+      puts "\nThere is 1 number in the right position. 1 number is correct, but in the wrong position."
+    elsif 
+      all_correct == 1 && included != 1
+      puts "\nThere is 1 number in the right position. #{included} numbers are correct, but in the wrong position."
+    elsif
+      all_correct != 1 && included == 1
+      puts "\nThere are #{all_correct} numbers in the right position. 1 number is correct, but in the wrong position."
+    else
+      puts "\nThere are #{all_correct} numbers in the right position. #{included} numbers are correct, but in the wrong position."
+    end
   end
 
-  def check_all_correct (guess, code)
+  def check_all_correct
     number = 0
-    if code.split('')[0] == guess.split('')[0]
+    if @code[0] == @guess[0]
       number +=1
     end
-    if code.split('')[1] == guess.split('')[1]
+    if @code[1] == @guess[1]
       number +=1
     end
-    if code.split('')[2] == guess.split('')[2]
+    if @code[2] == @guess[2]
       number +=1
     end
-    if code.split('')[3] == guess.split('')[3]
+    if @code[3] == @guess[3]
       number +=1
     end
-    puts "There are #{number} numbers in the correct place"
+    return number
   end
 
-  def check_included (guess, code)
+  def check_included
     number = 0
-    code_array = code.split('')
-    guess_array = guess.split('')
+    code_array = @code.split('')
+    guess_array = @guess.split('')
     guess_array.each { |digit| 
       if code_array.include?(digit) == true
-        number =+1
+        number += 1
       end
     }
-    puts number
+    return number
   end
 
 end
@@ -86,11 +104,7 @@ class Board
   end
 end
 
-class Guess_Maker
-  def initialize
-    @guess = ""
-  end
-
+class Human
   def make_guess
     puts "\nPlease make your guess of a 4 digit number"
     @guess = gets.chomp
@@ -98,24 +112,69 @@ class Guess_Maker
       puts "Your guess should have 4 digits"
       make_guess
     end
-    puts "Guess = #{@guess}"
     return @guess
-  end
-end
-
-class Code_Maker
-  def initialize
-    @player_type = "CPU"
-    @code = ""
   end
 
   def make_code
-    while @code.length <4
-    @code += rand(10).to_s
+    puts "\nPlease input your 4 digit code"
+    @code = gets.chomp
+    if @code.length != 4
+      puts "Your code should have 4 digits"
+      make_code
     end
-    puts @code
     return @code
   end
 end
 
-current_game = Game.new
+class CPU
+  def initialize
+    @code = ""
+    @guess = ""
+  end
+
+  def make_guess
+    @guess = ""
+    while @guess.length <4
+      @guess += rand(10).to_s
+    end
+      return @guess
+  end
+
+  def make_code
+    while @code.length <4
+      @code += rand(10).to_s
+    end
+    return @code
+  end
+end
+
+class Game_Builder
+
+  def create_set_up
+    puts "\nPlease choose who will create the code and who will guess - H for human and C for computer" 
+    puts "\nExamples: HC if you want a human to create the code and a computer to guess"
+    puts "\nCH if you want a computer to create the code and you (human) will guess."
+    set_up = gets.chomp.downcase
+
+    case set_up
+    when "ch"
+      code_maker = CPU.new
+      guess_maker = Human.new
+    when "cc"
+      code_maker = CPU.new
+      guess_maker = CPU.new
+    when "hh"
+      code_maker = Human.new
+      guess_maker = Human.new
+    when "hc"
+      code_maker = Human.new
+      guess_maker = CPU.new
+    else
+      puts "\nThis is not a valid choice"
+      create_set_up
+    end
+    current_game = Game.new(code_maker,guess_maker)
+  end
+end
+
+Game_Builder.new.create_set_up
